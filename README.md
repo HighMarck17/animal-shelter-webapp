@@ -12,6 +12,49 @@ Licensed under **AGPL-3.0** — see [LICENSE](LICENSE).
 
 ---
 
+## Preview
+
+Screenshots from a running deployment of this template (light and dark theme).
+The shelter name, photos and data are the ones filled into
+`config/shelter_config.py` — a fork renders its own.
+
+### Homepage
+
+Hero with image carousel and the two main calls to action.
+
+![Homepage — hero](preview_screenshots/preview_screenshot_animalshelterwebapp_home.png)
+
+Shelter statistics and the "about us" cards, dark theme.
+
+![Homepage — statistics and about](preview_screenshots/preview_screenshot_animalshelterwebapp_home_2_darktheme.png)
+
+Featured dogs pulled from the database, with availability badge.
+
+![Homepage — featured dogs](preview_screenshots/preview_screenshot_animalshelterwebapp_home_3_darktheme.png)
+
+### Dog list
+
+Filters by search text, sex, size, status and compatibility, plus pagination.
+
+![Dog list — filters](preview_screenshots/preview_screenshot_animalshelterwebapp_dogs_darktheme.png)
+
+![Dog list — cards and pagination](preview_screenshots/preview_screenshot_animalshelterwebapp_dogs_2.png)
+
+### Dog detail
+
+Image gallery, physical data, compatibility and the adoption call to action.
+
+![Dog detail](preview_screenshots/preview_screenshot_animalshelterwebapp_dogsdetail_darktheme.png)
+
+### Contact form
+
+Protected by reCAPTCHA, rate limiting and honeypot. Contact details are
+redacted in the screenshot.
+
+![Contact form](preview_screenshots/preview_screenshot_animalshelterwebapp_contacts_darktheme.png)
+
+---
+
 ## Fork & customize
 
 This project is a neutral, reusable template. To make it your own you only need
