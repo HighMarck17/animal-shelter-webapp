@@ -22,36 +22,36 @@ The shelter name, photos and data are the ones filled into
 
 Hero with image carousel and the two main calls to action.
 
-![Homepage — hero](preview_screenshots/preview_screenshot_animalshelterwebapp_home.png)
+<img src="preview_screenshots/preview_screenshot_animalshelterwebapp_home.png" alt="Homepage — hero" width="50%">
 
 Shelter statistics and the "about us" cards, dark theme.
 
-![Homepage — statistics and about](preview_screenshots/preview_screenshot_animalshelterwebapp_home_2_darktheme.png)
+<img src="preview_screenshots/preview_screenshot_animalshelterwebapp_home_2_darktheme.png" alt="Homepage — statistics and about" width="50%">
 
 Featured dogs pulled from the database, with availability badge.
 
-![Homepage — featured dogs](preview_screenshots/preview_screenshot_animalshelterwebapp_home_3_darktheme.png)
+<img src="preview_screenshots/preview_screenshot_animalshelterwebapp_home_3_darktheme.png" alt="Homepage — featured dogs" width="50%">
 
 ### Dog list
 
 Filters by search text, sex, size, status and compatibility, plus pagination.
 
-![Dog list — filters](preview_screenshots/preview_screenshot_animalshelterwebapp_dogs_darktheme.png)
+<img src="preview_screenshots/preview_screenshot_animalshelterwebapp_dogs_darktheme.png" alt="Dog list — filters" width="50%">
 
-![Dog list — cards and pagination](preview_screenshots/preview_screenshot_animalshelterwebapp_dogs_2.png)
+<img src="preview_screenshots/preview_screenshot_animalshelterwebapp_dogs_2.png" alt="Dog list — cards and pagination" width="50%">
 
 ### Dog detail
 
 Image gallery, physical data, compatibility and the adoption call to action.
 
-![Dog detail](preview_screenshots/preview_screenshot_animalshelterwebapp_dogsdetail_darktheme.png)
+<img src="preview_screenshots/preview_screenshot_animalshelterwebapp_dogsdetail_darktheme.png" alt="Dog detail" width="50%">
 
 ### Contact form
 
 Protected by reCAPTCHA, rate limiting and honeypot. Contact details are
 redacted in the screenshot.
 
-![Contact form](preview_screenshots/preview_screenshot_animalshelterwebapp_contacts_darktheme.png)
+<img src="preview_screenshots/preview_screenshot_animalshelterwebapp_contacts_darktheme.png" alt="Contact form" width="50%">
 
 ---
 
