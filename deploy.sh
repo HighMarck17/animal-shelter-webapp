@@ -210,12 +210,15 @@ update() {
     check_prerequisites
     DOMAIN=$(get_domain || true)
 
-    step "Pulling latest code (master)"
-    git pull origin master
+    step "Pulling latest code (main)"
+    git pull --ff-only origin main
 
-    step "Rebuild and restart web"
-    docker compose build web
-    docker compose up -d web
+    # Pull pinned service images and refresh the Python base image, so tag
+    # bumps in docker-compose.yml / Dockerfile and rebuilt patch images apply
+    step "Pull images, rebuild and restart"
+    docker compose pull db redis nginx
+    docker compose build --pull web
+    docker compose up -d db redis web nginx
 
     echo -n "Waiting for web to restart"
     local i=0

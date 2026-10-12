@@ -16,7 +16,6 @@ logs/
 CLAUDE.md
 *.md
 requirements/development.txt
-requirements/test.txt
 .coverage
 htmlcov/
 .pytest_cache/
