@@ -28,6 +28,7 @@ class ContactForm(forms.ModelForm):
     # === HONEYPOT (hidden field to catch bots) ===
     website = forms.URLField(
         required=False,
+        assume_scheme='https',
         widget=forms.TextInput(attrs={
             'style': 'position:absolute;left:-5000px;',
             'tabindex': '-1',
