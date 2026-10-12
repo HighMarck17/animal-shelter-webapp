@@ -39,8 +39,8 @@ class ContactMessageAdmin(admin.ModelAdmin):
     def is_spam_indicator(self, obj):
         """Visual spam indicator."""
         if obj.is_spam:
-            return format_html('<span style="color: red; font-weight: bold;">⚠️ SPAM</span>')
-        return format_html('<span style="color: green;">✓ OK</span>')
+            return format_html('<span style="color: {}; font-weight: bold;">{}</span>', 'red', '⚠️ SPAM')
+        return format_html('<span style="color: {};">{}</span>', 'green', '✓ OK')
     is_spam_indicator.short_description = 'Status'
     
     def spam_score_display(self, obj):
@@ -48,7 +48,7 @@ class ContactMessageAdmin(admin.ModelAdmin):
         try:
             score = float(obj.spam_score)
         except (ValueError, TypeError):
-            return format_html('<span style="color: gray;">N/A</span>')
+            return format_html('<span style="color: {};">{}</span>', 'gray', 'N/A')
         
         if score >= 0.7:
             color = '#28a745'  # Green
