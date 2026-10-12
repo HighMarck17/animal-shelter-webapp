@@ -77,7 +77,8 @@ The script runs, in order:
 ./deploy.sh update
 ```
 
-Runs: `git pull` → rebuild web image → restart web → smoke test.
+Runs: `git pull` (`main`) → pull the pinned db/redis/nginx images → rebuild the
+web image (refreshing the Python base image) → restart the stack → smoke test.
 DB migrations are applied automatically on container startup (`entrypoint.sh`).
 
 ---
