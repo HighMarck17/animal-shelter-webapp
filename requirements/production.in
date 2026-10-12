@@ -1,0 +1,6 @@
+# Production image: runtime dependencies plus the WSGI server, DB and cache drivers.
+-r base.in
+
+gunicorn==26.2.0
+psycopg[binary]==3.3.6
+redis==8.1.0

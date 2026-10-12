@@ -1,0 +1,15 @@
+# Local development: runtime + test tools + dev tools, same versions as the
+# production and test locks.
+-c production.txt
+-c test.txt
+-r base.in
+-r test.in
+
+# Development tools
+django-debug-toolbar==8.0.0
+ipython==9.17.1
+
+# Code quality
+black==26.10.1
+flake8==7.4.1
+isort==9.0.2

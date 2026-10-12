@@ -1,0 +1,7 @@
+# Test tools, installed on top of production.txt (Docker test stage, CI).
+-c production.txt
+
+pytest==9.1.1
+pytest-django==4.14.0
+pytest-cov==7.1.0
+factory-boy==3.3.3
