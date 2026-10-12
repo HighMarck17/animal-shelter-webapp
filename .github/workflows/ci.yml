@@ -26,11 +26,11 @@ jobs:
       matrix:
         requirements: [production, development]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
 
@@ -42,7 +42,8 @@ jobs:
           REQUIREMENTS: requirements/${{ matrix.requirements }}.txt
         run: |
           status=0
-          pip-audit --requirement "$REQUIREMENTS" --strict --desc on --aliases on --format markdown --output audit.md || status=$?
+          # The lock files are complete and hashed: audit exactly what they pin
+          pip-audit --requirement "$REQUIREMENTS" --require-hashes --strict --desc on --aliases on --format markdown --output audit.md || status=$?
           {
             echo "## pip-audit — \`$REQUIREMENTS\`"
             if [ -s audit.md ]; then
@@ -93,11 +94,11 @@ jobs:
       DB_HOST: localhost
       DB_PORT: "5432"
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -105,7 +106,7 @@ jobs:
 
       # Same requirement set as the Docker `test` stage
       - name: Install dependencies
-        run: python -m pip install --disable-pip-version-check -r requirements/production.txt -r requirements/test.txt
+        run: python -m pip install --disable-pip-version-check --require-hashes -r requirements/production.txt -r requirements/test.txt
 
       - name: Django system checks
         run: python manage.py check
@@ -140,18 +141,18 @@ jobs:
       CLOUDINARY_API_KEY: ci
       CLOUDINARY_API_SECRET: ci
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: requirements/*.txt
 
       - name: Install dependencies
-        run: python -m pip install --disable-pip-version-check -r requirements/production.txt
+        run: python -m pip install --disable-pip-version-check --require-hashes -r requirements/production.txt
 
       - name: Security deployment checks
         run: |
@@ -185,7 +186,7 @@ jobs:
           --health-timeout 3s
           --health-retries 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 

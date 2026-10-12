@@ -1,5 +1,5 @@
 # Direct runtime dependencies shared by every environment.
-# Transitive pins for production builds live in production.txt.
+# Edit the *.in files, then run ./compile.sh to regenerate the hash-locked *.txt.
 Django==5.2.18
 djangorestframework==3.18.3
 django-filter==26.2

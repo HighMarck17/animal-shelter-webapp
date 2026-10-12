@@ -144,7 +144,7 @@ animal-shelter-webapp/
 ├── locale/            — translation catalogs (en example provided)
 ├── static/            — custom CSS/JS, hero carousel images
 ├── templates/         — Django templates for each app
-├── requirements/      — base.txt / development.txt / production.txt / test.txt
+├── requirements/      — *.in sources → hash-locked production/test/development.txt
 ├── Dockerfile         — multi-stage: base / test / production
 ├── docker-compose.yml — web + db + redis + nginx + certbot + test runner
 └── entrypoint.sh      — migrate → collectstatic → gunicorn
@@ -307,6 +307,26 @@ pip install pip-audit
 pip-audit -r requirements/production.txt
 pip-audit -r requirements/development.txt
 ```
+
+### Dependencies
+
+Direct dependencies live in `requirements/*.in` (`base.in` is shared). The
+`*.txt` files are generated, fully pinned and hashed: Docker and CI install
+them with `--require-hashes`, so a package that differs from the lock is
+rejected. To add or update a dependency, edit the `.in` file and regenerate
+the locks with Python 3.12:
+
+```bash
+pip install pip-tools==7.6.2
+requirements/compile.sh                          # after editing a .in file
+requirements/compile.sh --upgrade-package django # bump one package
+```
+
+Dependabot (`.github/dependabot.yml`) opens weekly PRs for Python packages,
+the Docker base image, the compose images and the GitHub Actions (pinned by
+commit SHA). Major jumps that need a planned migration — Django beyond the
+5.2 LTS, Python minor versions, PostgreSQL/Redis majors, nginx mainline — are
+left out.
 
 ### Continuous integration
 
