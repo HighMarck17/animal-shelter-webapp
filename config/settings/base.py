@@ -155,10 +155,17 @@ SESSION_COOKIE_NAME = 'shelter_sessionid'
 SESSION_ENGINE = 'django.contrib.sessions.backends.cached_db'
 SESSION_CACHE_ALIAS = 'default'
 
+# === CLIENT IP (see apps/core/client_ip.py) ===
+# request.META key holding the client address. Keep REMOTE_ADDR when Gunicorn
+# faces clients directly; behind the bundled nginx, docker-compose.yml sets
+# HTTP_X_REAL_IP. Never point it at a header clients can set themselves.
+CLIENT_IP_META_KEY = env_config('CLIENT_IP_META_KEY', default='REMOTE_ADDR')
+
 # === RATE LIMITING ===
 RATELIMIT_ENABLE = True
 RATELIMIT_USE_CACHE = 'default'
 RATELIMIT_VIEW = 'apps.core.views.rate_limit_view'
+RATELIMIT_IP_META_KEY = 'apps.core.client_ip.get_client_ip'
 
 # === GOOGLE RECAPTCHA ===
 RECAPTCHA_PUBLIC_KEY = env_config('RECAPTCHA_PUBLIC_KEY', default='')
@@ -177,6 +184,7 @@ AXES_COOLOFF_TIME = 1
 AXES_LOCKOUT_PARAMETERS = ["ip_address", "username"]
 AXES_RESET_ON_SUCCESS = True
 AXES_CACHE = 'default'
+AXES_CLIENT_IP_CALLABLE = 'apps.core.client_ip.get_client_ip'
 
 # Authentication backend
 AUTHENTICATION_BACKENDS = [

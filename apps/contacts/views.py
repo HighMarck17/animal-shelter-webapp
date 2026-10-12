@@ -12,6 +12,8 @@ from django.conf import settings # pyright: ignore[reportMissingModuleSource]
 from django.utils.translation import gettext as _ # pyright: ignore[reportMissingModuleSource]
 import logging # pyright: ignore[reportMissingModuleSource]
 
+from apps.core.client_ip import get_client_ip
+
 from .forms import ContactForm
 
 logger = logging.getLogger(__name__)
@@ -46,7 +48,7 @@ class ContactView(FormView):
         context = super().get_context_data(**kwargs)
         
         # Show how many messages sent today from this IP
-        ip = self.get_client_ip(self.request)
+        ip = get_client_ip(self.request)
         cache_key = f'contact_count_{ip}'
         sent_today = cache.get(cache_key, 0)
         context['messages_sent_today'] = sent_today
@@ -62,7 +64,7 @@ class ContactView(FormView):
         if was_limited_ip:
             # Log rate limit hit
             logger.warning(
-                f"⚠️ RATE LIMIT - IP: {self.get_client_ip(request)} | "
+                f"⚠️ RATE LIMIT - IP: {get_client_ip(request)} | "
                 f"User-Agent: {request.META.get('HTTP_USER_AGENT', 'Unknown')[:100]} | "
                 f"Endpoint: {request.path}"
             )
@@ -84,7 +86,7 @@ class ContactView(FormView):
         message = form.save(commit=False)
         
         # Add security metadata
-        message.ip_address = self.get_client_ip(self.request)
+        message.ip_address = get_client_ip(self.request)
         message.user_agent = self.request.META.get('HTTP_USER_AGENT', '')[:500]
         
         # Score reCAPTCHA (if available)
@@ -98,7 +100,7 @@ class ContactView(FormView):
         self.send_notification_email(message)
         
         # Increment cache counter for this IP
-        ip = self.get_client_ip(self.request)
+        ip = get_client_ip(self.request)
         cache_key = f'contact_count_{ip}'
         count = cache.get(cache_key, 0)
         cache.set(cache_key, count + 1, 86400)  # 24 hours
@@ -123,7 +125,7 @@ class ContactView(FormView):
         # Log errors (could indicate spam)
         if 'website' in form.errors or 'message' in form.errors:
             logger.warning(
-                f"⚠️ SPAM ATTEMPT - IP: {self.get_client_ip(self.request)} | "
+                f"⚠️ SPAM ATTEMPT - IP: {get_client_ip(self.request)} | "
                 f"Errors: {form.errors}"
             )
         
@@ -192,16 +194,6 @@ Questo messaggio è stato generato automaticamente dal sito {settings.SHELTER_NA
 
         except Exception as e:
             logger.error(f"❌ Notification email failed: {str(e)}")
-
-    @staticmethod
-    def get_client_ip(request):
-        """Return the real client IP (even behind a proxy/CDN)."""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0].strip()
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip
 
 
 class ContactSuccessView(TemplateView):
