@@ -2,7 +2,7 @@ FROM python:3.12.15-slim-trixie AS base
 
 WORKDIR /app
 
-# Every dependency ships binary wheels (psycopg2-binary bundles libpq), so the
+# Every dependency ships binary wheels (psycopg-binary bundles libpq), so the
 # image needs no compiler or -dev headers. --only-binary makes a future
 # wheel-less dependency fail the build instead of compiling from source.
 COPY requirements/ requirements/
