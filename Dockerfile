@@ -1,17 +1,15 @@
-FROM python:3.12-slim AS base
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+FROM python:3.12.15-slim-trixie AS base
 
 WORKDIR /app
 
+# Every dependency ships binary wheels (psycopg2-binary bundles libpq), so the
+# image needs no compiler or -dev headers. --only-binary makes a future
+# wheel-less dependency fail the build instead of compiling from source.
 COPY requirements/ requirements/
-RUN pip install --no-cache-dir -r requirements/production.txt
+RUN pip install --no-cache-dir --only-binary=:all: -r requirements/production.txt
 
 FROM base AS test
-RUN pip install --no-cache-dir -r requirements/test.txt
+RUN pip install --no-cache-dir --only-binary=:all: -r requirements/test.txt
 COPY . .
 RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser

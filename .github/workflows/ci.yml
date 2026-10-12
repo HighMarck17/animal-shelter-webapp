@@ -1,0 +1,228 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly re-audit: new advisories get published against pins that did not change
+    - cron: "23 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pip-audit:
+    name: pip-audit (${{ matrix.requirements }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        requirements: [production, development]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install pip-audit
+        run: python -m pip install --disable-pip-version-check pip-audit==2.10.1
+
+      - name: Audit requirements/${{ matrix.requirements }}.txt
+        env:
+          REQUIREMENTS: requirements/${{ matrix.requirements }}.txt
+        run: |
+          status=0
+          pip-audit --requirement "$REQUIREMENTS" --strict --desc on --aliases on --format markdown --output audit.md || status=$?
+          {
+            echo "## pip-audit — \`$REQUIREMENTS\`"
+            if [ -s audit.md ]; then
+              cat audit.md
+            elif [ "$status" -eq 0 ]; then
+              echo "No known vulnerabilities found."
+            else
+              echo "pip-audit failed before producing a report: see the job log."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat audit.md 2>/dev/null || true
+          exit "$status"
+
+  tests:
+    name: tests (py${{ matrix.python-version }}, ${{ matrix.database }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Same Python and database as the production image
+          - python-version: "3.12"
+            database: postgres
+            settings: config.settings.test_pg
+          - python-version: "3.13"
+            database: sqlite
+            settings: config.settings.test
+    services:
+      postgres:
+        image: postgres:16.15-alpine
+        env:
+          POSTGRES_DB: shelter_test
+          POSTGRES_USER: shelter
+          POSTGRES_PASSWORD: shelter
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U shelter -d shelter_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DJANGO_ENVIRONMENT: test
+      DJANGO_SETTINGS_MODULE: ${{ matrix.settings }}
+      DB_NAME: shelter_test
+      DB_USER: shelter
+      DB_PASSWORD: shelter
+      DB_HOST: localhost
+      DB_PORT: "5432"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements/*.txt
+
+      # Same requirement set as the Docker `test` stage
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements/production.txt -r requirements/test.txt
+
+      - name: Django system checks
+        run: python manage.py check
+
+      - name: No missing migrations
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Run tests
+        run: python -m pytest --tb=short -q
+
+  deploy-check:
+    name: check --deploy (production settings)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Dummy values: the check only loads settings, it never connects anywhere
+      DJANGO_ENVIRONMENT: production
+      DEBUG: "False"
+      IS_LOCAL: "False"
+      ALLOWED_HOSTS: example.com
+      CSRF_TRUSTED_ORIGINS: https://example.com
+      CORS_ALLOWED_ORIGINS: https://example.com
+      DB_NAME: ci
+      DB_USER: ci
+      DB_PASSWORD: ci
+      EMAIL_HOST: localhost
+      EMAIL_PORT: "587"
+      EMAIL_HOST_USER: ci
+      EMAIL_HOST_PASSWORD: ci
+      DEFAULT_FROM_EMAIL: noreply@example.com
+      CLOUDINARY_CLOUD_NAME: ci
+      CLOUDINARY_API_KEY: ci
+      CLOUDINARY_API_SECRET: ci
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/*.txt
+
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements/production.txt
+
+      - name: Security deployment checks
+        run: |
+          SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(64))')"
+          export SECRET_KEY
+          python manage.py check --deploy --tag security --fail-level WARNING
+
+  docker:
+    name: docker image (build, tests, smoke run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16.15-alpine
+        env:
+          POSTGRES_DB: shelter
+          POSTGRES_USER: shelter
+          POSTGRES_PASSWORD: shelter
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U shelter -d shelter"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.4.11-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build images
+        run: |
+          docker build --target test -t shelter:test .
+          docker build --target production -t shelter:production .
+
+      - name: Tests inside the test image (PostgreSQL)
+        run: >-
+          docker run --rm --network host
+          -e DJANGO_SETTINGS_MODULE=config.settings.test_pg
+          -e DB_NAME=shelter -e DB_USER=shelter -e DB_PASSWORD=shelter
+          -e DB_HOST=127.0.0.1 -e DB_PORT=5432
+          shelter:test python -m pytest --tb=short -q
+
+      # Runs the real entrypoint (migrate → collectstatic → gunicorn)
+      - name: Smoke-run the production image
+        run: |
+          docker run -d --name web --network host \
+            -e DJANGO_ENVIRONMENT=production -e DEBUG=False -e IS_LOCAL=True \
+            -e SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(64))')" \
+            -e ALLOWED_HOSTS=127.0.0.1 -e SECURE_SSL_REDIRECT=False \
+            -e CSRF_TRUSTED_ORIGINS=https://127.0.0.1 -e CORS_ALLOWED_ORIGINS=https://127.0.0.1 \
+            -e DB_NAME=shelter -e DB_USER=shelter -e DB_PASSWORD=shelter \
+            -e DB_HOST=127.0.0.1 -e DB_PORT=5432 -e REDIS_URL=redis://127.0.0.1:6379/1 \
+            -e EMAIL_HOST=localhost -e EMAIL_PORT=587 -e EMAIL_HOST_USER=ci \
+            -e EMAIL_HOST_PASSWORD=ci -e DEFAULT_FROM_EMAIL=noreply@example.com \
+            shelter:production
+          for _ in $(seq 1 60); do
+            curl -fsS -o /dev/null http://127.0.0.1:8000/ && break
+            sleep 2
+          done
+          for path in / /dogs/ /faq/ /contacts/ /api/v1/dogs/ /static/css/base.css; do
+            curl -fsS -o /dev/null -w "GET $path -> %{http_code}\n" "http://127.0.0.1:8000$path"
+          done
+
+      - name: Production container logs
+        if: always()
+        run: docker logs web || true

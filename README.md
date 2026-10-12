@@ -1,5 +1,7 @@
 # Animal Shelter WebApp
 
+[![CI](https://github.com/HighMarck17/animal-shelter-webapp/actions/workflows/ci.yml/badge.svg)](https://github.com/HighMarck17/animal-shelter-webapp/actions/workflows/ci.yml)
+
 An open-source Django platform to manage and showcase adoptable dogs for an
 animal shelter. Custom design system (warm palette, mobile-first, no Bootstrap),
 production-ready architecture with environment separation, REST API and
@@ -103,19 +105,20 @@ $EDITOR config/shelter_config.py   # then fill in your shelter's data
 
 | Component | Version | Usage |
 |-----------|---------|-------|
-| Python | 3.12 | Runtime |
-| Django | 5.0.14 | Web framework |
-| Django REST Framework | 3.14.0 | REST API |
-| PostgreSQL | 16-alpine | Database (prod) |
+| Python | 3.12.15 (slim-trixie) | Runtime |
+| Django | 5.2.18 (LTS) | Web framework |
+| Django REST Framework | 3.18.3 | REST API |
+| PostgreSQL | 16.15-alpine | Database (prod) |
 | SQLite | — | Database (dev/test) |
-| Redis | 7-alpine | Cache and rate limiting (prod) |
-| Gunicorn | 22.0.0 | WSGI server |
-| WhiteNoise | 6.6.0 | Static files |
-| Pillow | 10.4.0 | Image processing / upload validation |
-| Cloudinary | 1.44.1 | Media storage (prod) |
+| Redis | 7.4.11-alpine | Cache and rate limiting (prod) |
+| Gunicorn | 26.2.0 | WSGI server |
+| nginx | 1.30.5-alpine | Reverse proxy, TLS, static files (prod) |
+| WhiteNoise | 6.12.0 | Static files |
+| Pillow | 12.3.0 | Image processing / upload validation |
+| Cloudinary | 1.46.3 | Media storage (prod) |
 | django-ratelimit | 4.1.0 | Rate limiting |
-| django-recaptcha | 4.0.0 | reCAPTCHA v2 |
-| django-axes | 6.1.1 | Login brute-force protection |
+| django-recaptcha | 4.1.0 | reCAPTCHA v2 |
+| django-axes | 8.3.1 | Login brute-force protection |
 | python-decouple | 3.8 | Environment variables |
 
 ---
@@ -297,7 +300,27 @@ DJANGO_ENVIRONMENT=test pytest apps/contacts/tests.py -v
 
 # On real PostgreSQL (Docker)
 docker compose --profile test run --rm test
+
+# Dependency vulnerability audit (same check as CI)
+pip install pip-audit
+pip-audit -r requirements/production.txt
+pip-audit -r requirements/development.txt
 ```
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every push to `main`, on every pull request,
+weekly (to catch advisories published against unchanged pins) and on demand:
+
+- **pip-audit** on `requirements/production.txt` and `requirements/development.txt`;
+  the findings table is published in the job summary and any known
+  vulnerability fails the build
+- **tests** on Python 3.12 + PostgreSQL 16 (same as the production image) and
+  Python 3.13 + SQLite, plus `manage.py check` and a missing-migrations check
+- **`check --deploy`** with the production settings (security checks, warnings fail)
+- **docker image**: builds the `test` and `production` targets, runs the tests
+  inside the test image and smoke-runs the production image (real entrypoint:
+  migrate → collectstatic → gunicorn) against PostgreSQL and Redis
 
 ---
 
@@ -311,6 +334,7 @@ docker compose --profile test run --rm test
 - **Security headers**: X-Frame-Options DENY, X-Content-Type-Options, X-XSS-Protection
 - **HSTS** (31536000s in production)
 - **django-axes**: tracks failed login attempts
+- **Dependency audit**: `pip-audit` in CI on every push/PR and weekly
 - **Image upload**: jpg/png/webp only, max 5 MB (`apps/dogs/validators.py`)
 
 ---
