@@ -223,6 +223,30 @@ jobs:
             curl -fsS -o /dev/null -w "GET $path -> %{http_code}\n" "http://127.0.0.1:8000$path"
           done
 
+      # The redis service exactly as docker-compose.yml defines it (password + ACL)
+      - name: Hardened Redis from docker-compose.yml
+        run: |
+          cp .env.example .env
+          REDIS_PASSWORD="$(openssl rand -hex 16)"
+          export REDIS_PASSWORD
+          docker compose -p shelter up -d --wait redis
+          echo "EVAL 'return 1' 0" | docker compose -p shelter exec -T redis redis-cli | grep -q NOPERM
+          echo "KEYS *" | docker compose -p shelter exec -T redis redis-cli | grep -q NOPERM
+          docker run --rm --network shelter_shelter_net \
+            -e DJANGO_SETTINGS_MODULE=config.settings -e DJANGO_ENVIRONMENT=production \
+            -e SECRET_KEY=ci -e IS_LOCAL=True -e ALLOWED_HOSTS=ci \
+            -e DB_NAME=ci -e DB_USER=ci -e DB_PASSWORD=ci \
+            -e EMAIL_HOST=localhost -e EMAIL_PORT=587 -e EMAIL_HOST_USER=ci \
+            -e EMAIL_HOST_PASSWORD=ci -e DEFAULT_FROM_EMAIL=noreply@example.com \
+            -e REDIS_URL=redis://redis:6379/1 -e REDIS_PASSWORD="$REDIS_PASSWORD" \
+            --entrypoint python shelter:production -c '
+          import django; django.setup()
+          from django.core.cache import cache
+          cache.set("k", 1, 30); assert cache.get("k") == 1
+          assert cache.add("lock", 1, 5) and cache.incr("k") == 2
+          cache.clear(); assert cache.get("k") is None
+          print("Django cache on hardened Redis: OK")'
+
       - name: Production container logs
         if: always()
         run: docker logs web || true

@@ -37,6 +37,11 @@ CACHES = {
         'LOCATION': env_config('REDIS_URL', default='redis://127.0.0.1:6379/1'),
     }
 }
+# Same secret the redis service in docker-compose.yml requires; kept out of
+# REDIS_URL so it needs no URL-encoding
+REDIS_PASSWORD = env_config('REDIS_PASSWORD', default='')
+if REDIS_PASSWORD:
+    CACHES['default']['OPTIONS'] = {'password': REDIS_PASSWORD}
 
 # === Security Settings ===
 SECURE_SSL_REDIRECT = env_config('SECURE_SSL_REDIRECT', default=True, cast=bool)
