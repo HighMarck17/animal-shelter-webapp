@@ -40,6 +40,7 @@ Open `.env` and set **all** the real values:
 | `ALLOWED_HOSTS` | `yourdomain.com,www.yourdomain.com` |
 | `DB_HOST` | `db` |
 | `REDIS_URL` | `redis://redis:6379/1` |
+| `REDIS_PASSWORD` | random string — `openssl rand -hex 32` (required by the redis container) |
 | `CSRF_TRUSTED_ORIGINS` | `https://yourdomain.com,https://www.yourdomain.com` |
 | `SECURE_SSL_REDIRECT` | `True` |
 | `CLOUDINARY_*` | Cloudinary account credentials |

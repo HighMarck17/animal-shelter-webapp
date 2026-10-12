@@ -29,7 +29,7 @@ check_prerequisites() {
     success ".env found"
 
     local missing=()
-    for var in SECRET_KEY DB_PASSWORD DJANGO_SUPERUSER_PASSWORD ALLOWED_HOSTS CSRF_TRUSTED_ORIGINS; do
+    for var in SECRET_KEY DB_PASSWORD REDIS_PASSWORD DJANGO_SUPERUSER_PASSWORD ALLOWED_HOSTS CSRF_TRUSTED_ORIGINS; do
         local val
         val=$(grep -E "^${var}=" "${SCRIPT_DIR}/.env" | cut -d'=' -f2- | xargs 2>/dev/null || true)
         [[ -z "$val" ]] && missing+=("$var")

@@ -243,6 +243,7 @@ DB_PORT=5432
 
 # Cache (Redis in prod)
 REDIS_URL=redis://127.0.0.1:6379/1
+REDIS_PASSWORD=<password>   # required by docker-compose.yml
 
 # Email (Brevo SMTP)
 EMAIL_HOST=smtp-relay.brevo.com
@@ -338,6 +339,7 @@ weekly (to catch advisories published against unchanged pins) and on demand:
   nginx's `X-Real-IP` behind the bundled proxy (`CLIENT_IP_META_KEY`);
   `X-Forwarded-For` is never trusted
 - **Dependency audit**: `pip-audit` in CI on every push/PR and weekly
+- **Redis**: password required; Lua scripting, admin and dangerous commands denied
 - **Image upload**: jpg/png/webp only, max 5 MB (`apps/dogs/validators.py`)
 
 ---

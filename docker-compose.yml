@@ -24,6 +24,25 @@ services:
   redis:
     image: redis:7.4.11-alpine
     restart: unless-stopped
+    # Password-protected default user. Denied: Lua scripting (the EVAL
+    # use-after-free RCE class, e.g. CVE-2025-49844), admin commands and
+    # "dangerous" ones (KEYS, FLUSHALL, RESTORE, MIGRATE, DEBUG, ...).
+    # FLUSHDB stays allowed: Django's cache.clear() uses it.
+    command:
+      - redis-server
+      - --user
+      - default
+      - "on"
+      - ">${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}"
+      - "~*"
+      - "&*"
+      - "+@all"
+      - "-@scripting"
+      - "-@admin"
+      - "-@dangerous"
+      - "+flushdb"
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
