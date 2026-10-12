@@ -26,11 +26,11 @@ jobs:
       matrix:
         requirements: [production, development]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
@@ -42,7 +42,7 @@ jobs:
           REQUIREMENTS: requirements/${{ matrix.requirements }}.txt
         run: |
           status=0
-          pip-audit --requirement "$REQUIREMENTS" --desc on --format markdown --output audit.md || status=$?
+          pip-audit --requirement "$REQUIREMENTS" --strict --desc on --aliases on --format markdown --output audit.md || status=$?
           {
             echo "## pip-audit — \`$REQUIREMENTS\`"
             if [ -s audit.md ]; then
@@ -73,7 +73,7 @@ jobs:
             settings: config.settings.test
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16.15-alpine
         env:
           POSTGRES_DB: shelter_test
           POSTGRES_USER: shelter
@@ -93,11 +93,11 @@ jobs:
       DB_HOST: localhost
       DB_PORT: "5432"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
@@ -140,11 +140,11 @@ jobs:
       CLOUDINARY_API_KEY: ci
       CLOUDINARY_API_SECRET: ci
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -158,3 +158,71 @@ jobs:
           SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(64))')"
           export SECRET_KEY
           python manage.py check --deploy --tag security --fail-level WARNING
+
+  docker:
+    name: docker image (build, tests, smoke run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16.15-alpine
+        env:
+          POSTGRES_DB: shelter
+          POSTGRES_USER: shelter
+          POSTGRES_PASSWORD: shelter
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U shelter -d shelter"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7.4.11-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build images
+        run: |
+          docker build --target test -t shelter:test .
+          docker build --target production -t shelter:production .
+
+      - name: Tests inside the test image (PostgreSQL)
+        run: >-
+          docker run --rm --network host
+          -e DJANGO_SETTINGS_MODULE=config.settings.test_pg
+          -e DB_NAME=shelter -e DB_USER=shelter -e DB_PASSWORD=shelter
+          -e DB_HOST=127.0.0.1 -e DB_PORT=5432
+          shelter:test python -m pytest --tb=short -q
+
+      # Runs the real entrypoint (migrate → collectstatic → gunicorn)
+      - name: Smoke-run the production image
+        run: |
+          docker run -d --name web --network host \
+            -e DJANGO_ENVIRONMENT=production -e DEBUG=False -e IS_LOCAL=True \
+            -e SECRET_KEY="$(python3 -c 'import secrets; print(secrets.token_urlsafe(64))')" \
+            -e ALLOWED_HOSTS=127.0.0.1 -e SECURE_SSL_REDIRECT=False \
+            -e CSRF_TRUSTED_ORIGINS=https://127.0.0.1 -e CORS_ALLOWED_ORIGINS=https://127.0.0.1 \
+            -e DB_NAME=shelter -e DB_USER=shelter -e DB_PASSWORD=shelter \
+            -e DB_HOST=127.0.0.1 -e DB_PORT=5432 -e REDIS_URL=redis://127.0.0.1:6379/1 \
+            -e EMAIL_HOST=localhost -e EMAIL_PORT=587 -e EMAIL_HOST_USER=ci \
+            -e EMAIL_HOST_PASSWORD=ci -e DEFAULT_FROM_EMAIL=noreply@example.com \
+            shelter:production
+          for _ in $(seq 1 60); do
+            curl -fsS -o /dev/null http://127.0.0.1:8000/ && break
+            sleep 2
+          done
+          for path in / /dogs/ /faq/ /contacts/ /api/v1/dogs/ /static/css/base.css; do
+            curl -fsS -o /dev/null -w "GET $path -> %{http_code}\n" "http://127.0.0.1:8000$path"
+          done
+
+      - name: Production container logs
+        if: always()
+        run: docker logs web || true
