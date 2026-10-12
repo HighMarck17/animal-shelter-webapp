@@ -334,6 +334,9 @@ weekly (to catch advisories published against unchanged pins) and on demand:
 - **Security headers**: X-Frame-Options DENY, X-Content-Type-Options, X-XSS-Protection
 - **HSTS** (31536000s in production)
 - **django-axes**: tracks failed login attempts
+- **Client IP**: rate limiting and lockouts use the real client address, read from
+  nginx's `X-Real-IP` behind the bundled proxy (`CLIENT_IP_META_KEY`);
+  `X-Forwarded-For` is never trusted
 - **Dependency audit**: `pip-audit` in CI on every push/PR and weekly
 - **Image upload**: jpg/png/webp only, max 5 MB (`apps/dogs/validators.py`)
 

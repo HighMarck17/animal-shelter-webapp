@@ -7,12 +7,11 @@ from unittest.mock import patch
 
 from django.core import mail
 from django.core.cache import cache
-from django.test import Client, RequestFactory, TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from apps.contacts.forms import ContactForm
 from apps.contacts.models import ContactMessage
-from apps.contacts.views import ContactView
 
 
 # ─── Base valid POST data ─────────────────────────────────────────────────────
@@ -177,11 +176,11 @@ class RateLimitTest(TestCase):
     def setUp(self):
         cache.clear()
 
-    def _post(self, client=None, remote_addr='127.0.0.1'):
+    def _post(self, client=None, remote_addr='127.0.0.1', **extra):
         c = client or self.client
         return c.post(reverse('contacts:contact'), data=_valid_post(),
                       REMOTE_ADDR=remote_addr,
-                      HTTP_USER_AGENT='TestAgent/1.0')
+                      HTTP_USER_AGENT='TestAgent/1.0', **extra)
 
     @override_settings(RATELIMIT_ENABLE=True)
     @patch('django_recaptcha.fields.ReCaptchaField.validate', return_value=True)
@@ -208,6 +207,26 @@ class RateLimitTest(TestCase):
         # A different IP must not be blocked → 302 redirect
         response = self._post(remote_addr='10.0.0.2')
         self.assertEqual(response.status_code, 302)
+
+    @override_settings(RATELIMIT_ENABLE=True, CLIENT_IP_META_KEY='HTTP_X_REAL_IP')
+    @patch('django_recaptcha.fields.ReCaptchaField.validate', return_value=True)
+    def test_rate_limit_is_per_client_behind_proxy(self, _mock):
+        """Behind nginx every request has the proxy's REMOTE_ADDR: the limit
+        must still count each client (X-Real-IP), not all visitors together."""
+        for _ in range(3):
+            self._post(remote_addr='172.18.0.5', HTTP_X_REAL_IP='203.0.113.1')
+        response = self._post(remote_addr='172.18.0.5', HTTP_X_REAL_IP='203.0.113.1')
+        self.assertContains(response, 'limite massimo')
+        response = self._post(remote_addr='172.18.0.5', HTTP_X_REAL_IP='203.0.113.2')
+        self.assertEqual(response.status_code, 302)
+
+    @override_settings(RATELIMIT_ENABLE=True)
+    @patch('django_recaptcha.fields.ReCaptchaField.validate', return_value=True)
+    def test_rate_limit_not_bypassed_by_spoofed_forwarded_for(self, _mock):
+        for i in range(3):
+            self._post(HTTP_X_FORWARDED_FOR=f'198.51.100.{i}')
+        response = self._post(HTTP_X_FORWARDED_FOR='198.51.100.99')
+        self.assertContains(response, 'limite massimo')
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -296,23 +315,24 @@ class IpTrackingTest(TestCase):
 
     @override_settings(RATELIMIT_ENABLE=False)
     @patch('django_recaptcha.fields.ReCaptchaField.validate', return_value=True)
-    def test_x_forwarded_for_first_ip_used(self, _mock):
-        """With a chained X-Forwarded-For, take the first IP (real client)."""
+    def test_spoofed_x_forwarded_for_is_ignored(self, _mock):
+        """A client-supplied X-Forwarded-For must not replace the stored IP."""
         self.client.post(reverse('contacts:contact'), data=_valid_post(),
-                         HTTP_X_FORWARDED_FOR='10.10.10.1, 10.10.10.2, 10.10.10.3')
+                         REMOTE_ADDR='192.168.1.50',
+                         HTTP_X_FORWARDED_FOR='10.10.10.1, 10.10.10.2')
         msg = ContactMessage.objects.last()
         self.assertIsNotNone(msg)
-        self.assertEqual(msg.ip_address, '10.10.10.1')
+        self.assertEqual(msg.ip_address, '192.168.1.50')
 
-    def test_get_client_ip_direct_connection(self):
-        """Without X-Forwarded-For it uses REMOTE_ADDR."""
-        request = RequestFactory().get('/', REMOTE_ADDR='5.5.5.5')
-        self.assertEqual(ContactView.get_client_ip(request), '5.5.5.5')
-
-    def test_get_client_ip_forwarded_header(self):
-        """With X-Forwarded-For it takes the first value in the list."""
-        request = RequestFactory().get('/', HTTP_X_FORWARDED_FOR='1.2.3.4, 5.6.7.8')
-        self.assertEqual(ContactView.get_client_ip(request), '1.2.3.4')
+    @override_settings(RATELIMIT_ENABLE=False, CLIENT_IP_META_KEY='HTTP_X_REAL_IP')
+    @patch('django_recaptcha.fields.ReCaptchaField.validate', return_value=True)
+    def test_ip_from_proxy_header_saved(self, _mock):
+        """Behind nginx the stored IP is the one nginx puts in X-Real-IP."""
+        self.client.post(reverse('contacts:contact'), data=_valid_post(),
+                         REMOTE_ADDR='172.18.0.5', HTTP_X_REAL_IP='203.0.113.7')
+        msg = ContactMessage.objects.last()
+        self.assertIsNotNone(msg)
+        self.assertEqual(msg.ip_address, '203.0.113.7')
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

@@ -73,6 +73,27 @@ class AxesBruteForceTest(TestCase):
         except ImportError:
             pass
 
+    @override_settings(AXES_FAILURE_LIMIT=3, AXES_ENABLED=True,
+                       CLIENT_IP_META_KEY='HTTP_X_REAL_IP')
+    def test_axes_lockout_is_per_client_behind_proxy(self):
+        """Behind nginx, failures from one client must not lock out another
+        client that reaches Django through the same proxy address."""
+        from axes.models import AccessAttempt
+
+        proxy_addr = '172.18.0.5'
+        for _ in range(4):
+            self.client.post(self.admin_url,
+                             {'username': 'attacker', 'password': 'wrong'},
+                             REMOTE_ADDR=proxy_addr, HTTP_X_REAL_IP='203.0.113.1')
+        response = self.client.post(self.admin_url,
+                                    {'username': 'staff', 'password': 'wrong'},
+                                    REMOTE_ADDR=proxy_addr, HTTP_X_REAL_IP='203.0.113.2')
+        self.assertNotEqual(response.status_code, 429)
+        self.assertEqual(
+            set(AccessAttempt.objects.values_list('ip_address', flat=True)),
+            {'203.0.113.1', '203.0.113.2'},
+        )
+
     @override_settings(AXES_FAILURE_LIMIT=3, AXES_ENABLED=True, AXES_RESET_ON_SUCCESS=True)
     def test_axes_records_failed_attempts(self):
         """Each failed attempt is recorded in AccessAttempt."""

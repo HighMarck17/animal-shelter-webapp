@@ -43,6 +43,8 @@ services:
     restart: unless-stopped
     environment:
       DJANGO_ENVIRONMENT: production
+      # Only nginx can reach web, and it overwrites X-Real-IP with the peer address
+      CLIENT_IP_META_KEY: HTTP_X_REAL_IP
     env_file:
       - .env
     volumes:
