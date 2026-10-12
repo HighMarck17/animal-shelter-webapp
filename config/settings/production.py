@@ -57,14 +57,23 @@ CSRF_TRUSTED_ORIGINS = env_config('CSRF_TRUSTED_ORIGINS', default='').split(',')
 CORS_ALLOWED_ORIGINS = env_config('CORS_ALLOWED_ORIGINS', default='').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
-# === Static files - WhiteNoise ===
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# === Storages: WhiteNoise for static files, local disk for media by default ===
+# Django 5.1 removed the STATICFILES_STORAGE / DEFAULT_FILE_STORAGE settings:
+# they are silently ignored, so storages must be configured here.
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 # === CLOUDINARY for media files ===
 # NOTE: `cloudinary_storage` must NOT go into INSTALLED_APPS.
-# Its `collectstatic` override silently discards files when STATICFILES_STORAGE
-# is not `StaticCloudinaryStorage` — here we use WhiteNoise for static files,
-# so collect would not write anything to disk.
+# Its `collectstatic` override only works with its own StaticCloudinaryStorage
+# (and reads the legacy STATICFILES_STORAGE setting) — here we use WhiteNoise
+# for static files, so collect would not write anything to disk.
 if not IS_LOCAL:
     INSTALLED_APPS.append('cloudinary')
 
@@ -74,7 +83,9 @@ if not IS_LOCAL:
         'API_SECRET': env_config('CLOUDINARY_API_SECRET'),
     }
 
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    STORAGES['default'] = {
+        'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
+    }
 
 # === Email - Production SMTP ===
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

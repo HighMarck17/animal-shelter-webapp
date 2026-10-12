@@ -29,6 +29,9 @@ group = None
 tmp_upload_dir = None
 
 # Security
+# Gunicorn >= 25.1 opens a control socket (for `gunicornc`) in $HOME by default;
+# it is not used here, so keep the attack surface minimal
+control_socket_disable = True
 limit_request_line = 4094
 limit_request_fields = 100
 limit_request_field_size = 8190
