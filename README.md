@@ -105,13 +105,14 @@ $EDITOR config/shelter_config.py   # then fill in your shelter's data
 
 | Component | Version | Usage |
 |-----------|---------|-------|
-| Python | 3.12 | Runtime |
+| Python | 3.12.15 (slim-trixie) | Runtime |
 | Django | 5.2.18 (LTS) | Web framework |
 | Django REST Framework | 3.18.3 | REST API |
-| PostgreSQL | 16-alpine | Database (prod) |
+| PostgreSQL | 16.15-alpine | Database (prod) |
 | SQLite | — | Database (dev/test) |
-| Redis | 7-alpine | Cache and rate limiting (prod) |
+| Redis | 7.4.11-alpine | Cache and rate limiting (prod) |
 | Gunicorn | 26.2.0 | WSGI server |
+| nginx | 1.30.5-alpine | Reverse proxy, TLS, static files (prod) |
 | WhiteNoise | 6.12.0 | Static files |
 | Pillow | 12.3.0 | Image processing / upload validation |
 | Cloudinary | 1.46.3 | Media storage (prod) |
@@ -317,6 +318,9 @@ weekly (to catch advisories published against unchanged pins) and on demand:
 - **tests** on Python 3.12 + PostgreSQL 16 (same as the production image) and
   Python 3.13 + SQLite, plus `manage.py check` and a missing-migrations check
 - **`check --deploy`** with the production settings (security checks, warnings fail)
+- **docker image**: builds the `test` and `production` targets, runs the tests
+  inside the test image and smoke-runs the production image (real entrypoint:
+  migrate → collectstatic → gunicorn) against PostgreSQL and Redis
 
 ---
 
