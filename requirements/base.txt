@@ -20,5 +20,7 @@ django-widget-tweaks==1.5.1
 # Monitoring
 django-axes==8.3.1
 
-# Media storage - Cloudinary
-django-cloudinary-storage==0.3.0
+# Media storage - Cloudinary (apps/core/storage.py)
+cloudinary==1.46.3
+certifi==2026.7.22
+urllib3==2.8.0

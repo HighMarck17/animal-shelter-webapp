@@ -69,14 +69,8 @@ STORAGES = {
     },
 }
 
-# === CLOUDINARY for media files ===
-# NOTE: `cloudinary_storage` must NOT go into INSTALLED_APPS.
-# Its `collectstatic` override only works with its own StaticCloudinaryStorage
-# (and reads the legacy STATICFILES_STORAGE setting) — here we use WhiteNoise
-# for static files, so collect would not write anything to disk.
+# === CLOUDINARY for media files (apps/core/storage.py) ===
 if not IS_LOCAL:
-    INSTALLED_APPS.append('cloudinary')
-
     CLOUDINARY_STORAGE = {
         'CLOUD_NAME': env_config('CLOUDINARY_CLOUD_NAME'),
         'API_KEY': env_config('CLOUDINARY_API_KEY'),
@@ -84,7 +78,7 @@ if not IS_LOCAL:
     }
 
     STORAGES['default'] = {
-        'BACKEND': 'cloudinary_storage.storage.MediaCloudinaryStorage',
+        'BACKEND': 'apps.core.storage.CloudinaryMediaStorage',
     }
 
 # === Email - Production SMTP ===
