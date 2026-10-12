@@ -52,9 +52,11 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    
-    # Debug toolbar
-    import debug_toolbar # pyright: ignore[reportMissingImports]
-    urlpatterns += [
-        path('__debug__/', include(debug_toolbar.urls)),
-    ]
+
+    # Debug toolbar — only when installed (development.py), so DEBUG=True with
+    # the test or production requirements does not crash on import
+    if 'debug_toolbar' in settings.INSTALLED_APPS:
+        import debug_toolbar # pyright: ignore[reportMissingImports]
+        urlpatterns += [
+            path('__debug__/', include(debug_toolbar.urls)),
+        ]
