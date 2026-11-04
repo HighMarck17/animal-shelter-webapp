@@ -1,7 +1,5 @@
-# Local development: runtime + test tools + dev tools, same versions as the
-# production and test locks.
--c production.txt
--c test.txt
+# Local development: runtime + test tools + dev tools. check_locks.py keeps
+# the versions equal to the production and test locks.
 -r base.in
 -r test.in
 

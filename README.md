@@ -314,13 +314,21 @@ Direct dependencies live in `requirements/*.in` (`base.in` is shared). The
 `*.txt` files are generated, fully pinned and hashed: Docker and CI install
 them with `--require-hashes`, so a package that differs from the lock is
 rejected. To add or update a dependency, edit the `.in` file and regenerate
-the locks with Python 3.12:
+the locks on Linux with Python 3.12 (pip-compile resolves for the platform it
+runs on: on Windows it adds `tzdata` and `colorama`):
 
 ```bash
 pip install pip-tools==7.6.2
 requirements/compile.sh                          # after editing a .in file
 requirements/compile.sh --upgrade-package django # bump one package
 ```
+
+No lock is a `-c` constraint of another, because Dependabot cannot update a
+package pinned by one. Instead `requirements/check_locks.py`, run by
+`compile.sh` and by CI, fails when a package has two versions in two locks.
+That can happen when a bump of a dev tool needs a newer shared dependency
+(e.g. `typing-extensions`) only in `development.txt`: fix it on the PR branch
+with `requirements/compile.sh --upgrade-package <package>`.
 
 Dependabot (`.github/dependabot.yml`) opens weekly PRs for Python packages,
 the Docker base image, the compose images and the GitHub Actions (pinned by
@@ -336,6 +344,8 @@ weekly (to catch advisories published against unchanged pins) and on demand:
 - **pip-audit** on `requirements/production.txt` and `requirements/development.txt`;
   the findings table is published in the job summary and any known
   vulnerability fails the build
+- **lock files**: `requirements/check_locks.py`, one version per package
+  across the three locks
 - **tests** on Python 3.12 + PostgreSQL 16 (same as the production image) and
   Python 3.13 + SQLite, plus `manage.py check` and a missing-migrations check
 - **`check --deploy`** with the production settings (security checks, warnings fail)
