@@ -102,7 +102,7 @@ services:
         max-file: "5"
 
   certbot:
-    image: certbot/certbot:v5.8.0
+    image: certbot/certbot:v5.9.0
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt
       - certbot_webroot:/var/www/certbot
