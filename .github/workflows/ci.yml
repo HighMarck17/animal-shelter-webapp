@@ -57,6 +57,20 @@ jobs:
           cat audit.md 2>/dev/null || true
           exit "$status"
 
+  locks:
+    name: lock files (one version per package)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The locks are compiled without -c on each other (so Dependabot can
+      # update them): production.txt + test.txt must still install together
+      - name: Same version of every package across the locks
+        run: python3 requirements/check_locks.py
+
   tests:
     name: tests (py${{ matrix.python-version }}, ${{ matrix.database }})
     runs-on: ubuntu-latest
