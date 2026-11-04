@@ -22,7 +22,7 @@ services:
         max-file: "5"
 
   redis:
-    image: redis:7.4.11-alpine
+    image: redis:7.4.12-alpine
     restart: unless-stopped
     # Password-protected default user. Denied: Lua scripting (the EVAL
     # use-after-free RCE class, e.g. CVE-2025-49844), admin commands and
