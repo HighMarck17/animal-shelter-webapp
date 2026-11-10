@@ -18,7 +18,7 @@ django-recaptcha==4.1.0
 django-widget-tweaks==1.5.1
 
 # Monitoring
-django-axes==8.3.1
+django-axes==9.0.0
 
 # Media storage - Cloudinary (apps/core/storage.py)
 cloudinary==1.46.3
