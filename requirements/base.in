@@ -1,6 +1,6 @@
 # Direct runtime dependencies shared by every environment.
 # Edit the *.in files, then run ./compile.sh to regenerate the hash-locked *.txt.
-Django==5.2.18
+Django==5.2.19
 djangorestframework==3.18.3
 django-filter==26.2
 django-cors-headers==4.9.0
@@ -21,6 +21,6 @@ django-widget-tweaks==1.5.1
 django-axes==8.3.1
 
 # Media storage - Cloudinary (apps/core/storage.py)
-cloudinary==1.46.3
+cloudinary==1.47.0
 certifi==2026.10.23
 urllib3==2.8.0
